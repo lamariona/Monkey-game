@@ -1,0 +1,126 @@
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let boxes = [];
+let score = 0;
+let lives = 3;
+let level = 1;
+let gameOver = false;
+
+// MONKEY
+const monkey = {
+    x: 180,
+    y: 400,
+    width: 30,
+    height: 30,
+    velocityY: 0,
+    gravity: 0.5,
+    jumpPower: -10
+};
+
+// CREATE BOX
+function createBox() {
+    const size = 40;
+    const isBonus = Math.random() < 0.2;
+    boxes.push({
+        x: Math.random() * (canvas.width - size),
+        y: -size,
+        size,
+        speed: 2 + level,
+        bonus: isBonus
+    });
+}
+
+// UPDATE GAME
+function update() {
+    if (gameOver) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // MONKEY PHYSICS
+    monkey.velocityY += monkey.gravity;
+    monkey.y += monkey.velocityY;
+
+    if (monkey.y > canvas.height - monkey.height) {
+        monkey.y = canvas.height - monkey.height;
+        monkey.velocityY = monkey.jumpPower;
+        lives--;
+        updateUI();
+        if (lives <= 0) endGame();
+    }
+
+    // DRAW MONKEY
+    ctx.font = "28px Arial";
+    ctx.fillText("🐒", monkey.x, monkey.y + monkey.height);
+
+    // BOXES
+    boxes.forEach((box, index) => {
+        box.y += box.speed;
+
+        ctx.fillStyle = box.bonus ? "gold" : "red";
+        ctx.fillRect(box.x, box.y, box.size, box.size);
+
+        // MONKEY LANDING ON BOX
+        if (
+            monkey.x < box.x + box.size &&
+            monkey.x + monkey.width > box.x &&
+            monkey.y + monkey.height < box.y + box.size &&
+            monkey.y + monkey.height > box.y &&
+            monkey.velocityY > 0
+        ) {
+            monkey.velocityY = monkey.jumpPower;
+            score += box.bonus ? 5 : 1;
+            boxes.splice(index, 1);
+            updateUI();
+        }
+
+        // BOX MISSED
+        if (box.y > canvas.height) {
+            boxes.splice(index, 1);
+        }
+    });
+
+    // LEVEL UP
+    if (score >= level * 10) {
+        level++;
+        updateUI();
+    }
+
+    requestAnimationFrame(update);
+}
+
+// MOVE MONKEY LEFT / RIGHT
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") monkey.x -= 6;
+    if (e.key === "ArrowRight") monkey.x += 6;
+
+    monkey.x = Math.max(0, Math.min(canvas.width - monkey.width, monkey.x));
+});
+
+// MOBILE TOUCH
+canvas.addEventListener("touchmove", e => {
+    const rect = canvas.getBoundingClientRect();
+    monkey.x = e.touches[0].clientX - rect.left - monkey.width / 2;
+});
+
+// UI
+function updateUI() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = lives;
+    document.getElementById("level").textContent = level;
+}
+
+// GAME OVER
+function endGame() {
+    gameOver = true;
+    setTimeout(() => {
+        alert("🐒 Game Over!\nScore: " + score);
+        location.reload();
+    }, 100);
+}
+
+// START
+setInterval(createBox, 900);
+update();
+</script>  
